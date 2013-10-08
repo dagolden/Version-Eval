@@ -89,6 +89,16 @@ my @cases = (
         string => q[$VERSION do { my $n; $n++ while 1; return $_ };],
         expect => undef,
     },
+    {
+        label  => "exit",
+        string => q[$VERSION = 1.23; exit;],
+        expect => undef,
+    },
+    {
+        label  => "die",
+        string => q[$VERSION = 1.23; die;],
+        expect => undef,
+    },
     # malicious
     {
         label  => "infinite loop",

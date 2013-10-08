@@ -54,12 +54,11 @@ sub eval_version {
         }
     };
 
-    my $captured = readline $pipe->reader;
+    my $result = readline $pipe->reader;
 
-    return if $rc; # error condition
+    return if $rc || !defined $result; # error condition
 
-    # parse its output
-    chomp( my $result = $captured );
+    chomp $result;
 
     return $result;
 }
