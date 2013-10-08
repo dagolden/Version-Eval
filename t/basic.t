@@ -77,6 +77,11 @@ my @cases = (
         string => q[use version; our $VERSION = qv("1.2.3");],
         expect => "v1.2.3",
     },
+    {
+        label  => "version.pm in eval",
+        string => q[$VERSION = eval 'use version; 1' ? 'version'->new('1.23') : '1.23';],
+        expect => "1.23",
+    },
     # syntax
     {
         label  => "no trailing semicolon",
@@ -114,13 +119,5 @@ for my $c (@cases) {
 }
 
 done_testing;
-#
-# This file is part of Version-Eval
-#
-# This software is Copyright (c) 2013 by David Golden.
-#
-# This is free software, licensed under:
-#
-#   The Apache License, Version 2.0, January 2004
-#
+# COPYRIGHT
 # vim: ts=4 sts=4 sw=4 et:
