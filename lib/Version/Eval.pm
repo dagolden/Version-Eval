@@ -69,6 +69,16 @@ sub _pl_template {
     return <<"HERE"
 use 5.008001;
 use version;
+use Safe;
+
+my \$comp = Safe->new;
+\$comp->permit("entereval"); # for MBARBON/Module-Info-0.30.tar.gz
+\$comp->share("*version::new");
+\$comp->share("*version::numify");
+\$comp->share_from('main', ['*version::',
+                            '*Exporter::',
+                            '*DynaLoader::']);
+\$comp->share_from('version', ['&qv']);
 
 my \$RESULT = version->parse(
     do {
@@ -76,7 +86,7 @@ my \$RESULT = version->parse(
     }
 );
 
-print \$RESULT, "\\n";
+print version->parse(\$RESULT), "\\n";
 
 HERE
 }
