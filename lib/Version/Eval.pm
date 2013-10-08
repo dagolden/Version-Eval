@@ -28,7 +28,6 @@ sub eval_version {
 
     # run it with a timeout
     my $pipe = IO::Pipe->new;
-
     my $rc;
     run_fork {
         parent {
@@ -38,13 +37,16 @@ sub eval_version {
                 alarm $timeout;
                 my $c = waitpid $child, 0;
                 alarm 0;
-                $c;
+                ( $c != $child ) || $?;
             };
             if ( $@ eq "alarm\n" ) {
                 kill 'KILL', $child;
                 waitpid $child, 0;
+                $rc = $?;
             }
-            $rc = $?;
+            else {
+                $rc = $got;
+            }
         }
         child {
             open STDOUT, "<&" . fileno $pipe->writer;
