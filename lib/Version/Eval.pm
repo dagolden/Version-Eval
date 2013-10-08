@@ -6,8 +6,10 @@ package Version::Eval;
 # ABSTRACT: Safe parsing of module $VERSION lines
 # VERSION
 
-use Capture::Tiny qw/capture/;
+use File::Spec;
 use File::Temp 0.18;
+use IO::Pipe;
+use Proc::Fork;
 
 use parent 'Exporter';
 our @EXPORT_OK = qw/eval_version/;
@@ -25,21 +27,39 @@ sub eval_version {
     close $temp;
 
     # run it with a timeout
-    my ( $stdout, $stderr, $ok ) = capture {
-        my $rc;
-        eval {
-            local $SIG{ALRM} = sub { die "alarm\n" };
-            alarm $timeout;
-            $rc = system( $^X, $temp );
-            alarm 0;
-        };
-        return ( $@ eq '' && $rc == 0 ? 1 : 0 );
+    my $pipe = IO::Pipe->new;
+
+    my $rc;
+    run_fork {
+        parent {
+            my $child = shift;
+            my $got   = eval {
+                local $SIG{ALRM} = sub { die "alarm\n" };
+                alarm $timeout;
+                my $c = waitpid $child, 0;
+                alarm 0;
+                $c;
+            };
+            if ( $@ eq "alarm\n" ) {
+                kill 'KILL', $child;
+                waitpid $child, 0;
+            }
+            $rc = $?;
+        }
+        child {
+            open STDOUT, "<&" . fileno $pipe->writer;
+            open STDERR, File::Spec->devnull;
+            close STDIN;
+            exec $^X, $temp;
+        }
     };
 
-    return if !$ok; # error condition
+    my $captured = readline $pipe->reader;
+
+    return if $rc; # error condition
 
     # parse its output
-    chomp( my $result = $stdout );
+    chomp( my $result = $captured );
 
     return $result;
 }
