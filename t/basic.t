@@ -1,0 +1,116 @@
+use 5.008001;
+use strict;
+use warnings;
+use Test::More 0.96;
+use Test::FailWarnings;
+
+use version;
+use Version::Eval qw/eval_version/;
+
+my @cases = (
+    # decimals
+    {
+        label  => "bare decimal",
+        string => q[$VERSION = "1.23";],
+        expect => "1.23",
+    },
+    {
+        label  => "our decimal",
+        string => q[our $VERSION = "1.23";],
+        expect => "1.23",
+    },
+    {
+        label  => "qualified decimal",
+        string => q[$Foo::VERSION = "1.23";],
+        expect => "1.23",
+    },
+    {
+        label  => "alpha decimal",
+        string => q[our $VERSION = "1.23_01";],
+        expect => "1.23_01",
+    },
+    # v-strings
+    {
+        label  => "bare v-string",
+        string => q[$VERSION = v1.2.3;],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "our v-string",
+        string => q[our $VERSION = v1.2.3;],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "qualified v-string",
+        string => q[$Foo::VERSION = v1.2.3;],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "alpha v-string",
+        string => q[our $VERSION = v1.2.3_4;],
+        expect => "v1.2.3_4",
+    },
+    # dotted-decimals
+    {
+        label  => "bare dotted-decimal string",
+        string => q[$VERSION = "v1.2.3";],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "our dotted-decimal string",
+        string => q[our $VERSION = "v1.2.3";],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "qualified dotted-decimal string",
+        string => q[$Foo::VERSION = "v1.2.3";],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "alpha dotted-decimal string",
+        string => q[our $VERSION = "v1.2.3_4";],
+        expect => "v1.2.3_4",
+    },
+    # version.pm
+    {
+        label  => "version.pm",
+        string => q[use version; our $VERSION = qv("1.2.3");],
+        expect => "v1.2.3",
+    },
+    # syntax
+    {
+        label  => "no trailing semicolon",
+        string => q[$VERSION = "1.23"],
+        expect => "1.23",
+    },
+    # errors
+    {
+        label  => "syntax error",
+        string => q[$VERSION do { my $n; $n++ while 1; return $_ };],
+        expect => undef,
+    },
+    # malicious
+    {
+        label  => "infinite loop",
+        string => q[$VERSION = do { my $n; $n++ while 1; return $_ };],
+        expect => undef,
+    },
+);
+
+for my $c (@cases) {
+    my $got = eval_version( $c->{string} );
+    my $expect = defined $c->{expect} ? version->parse( $c->{expect} ) : undef;
+    is( $got, $expect, $c->{label} );
+}
+
+done_testing;
+#
+# This file is part of Version-Eval
+#
+# This software is Copyright (c) 2013 by David Golden.
+#
+# This is free software, licensed under:
+#
+#   The Apache License, Version 2.0, January 2004
+#
+# vim: ts=4 sts=4 sw=4 et:
