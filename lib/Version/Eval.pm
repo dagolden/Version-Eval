@@ -17,6 +17,18 @@ our @EXPORT_OK = qw/eval_version/;
 # Win32 is slow to spawn processes
 my $TIMEOUT = $^O eq 'MSWin32' ? 5 : 2;
 
+=func eval_version
+
+    my $version = eval_version( q[our $VERSION = "1.23"] );
+
+Given a string that contains a C<$VERSION> declaration, this
+function will evaluate it in a L<Safe> compartment in a
+separate process.  If the C<$VERSION> is a valid version
+string according to L<version>, it will return it as a string,
+otherwise, it will return undef.
+
+=cut
+
 sub eval_version {
     my ( $string, $timeout ) = @_;
     $timeout = $TIMEOUT unless defined $timeout;
