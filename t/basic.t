@@ -73,13 +73,33 @@ my @cases = (
     },
     # version.pm
     {
-        label  => "use version.pm",
+        label  => "use version.pm + qv",
         string => q[use version; our $VERSION = qv("1.2.3");],
         expect => "v1.2.3",
     },
     {
-        label  => "require version.pm",
-        string => q[require version; our $VERSION = qv("1.2.3");],
+        label  => "require version.pm + version::qv",
+        string => q[require version; our $VERSION = version::qv("1.2.3");],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "use version.pm + new",
+        string => q[use version; our $VERSION = version->new("1.2.3");],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "use version.pm + new + numify",
+        string => q[use version; our $VERSION = version->new("1.2.3")->numify;],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "use version.pm + new + normal",
+        string => q[use version; our $VERSION = version->new("1.2.3")->normal;],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "use version.pm + declare",
+        string => q[use version; our $VERSION = version->declare("1.2.3");],
         expect => "v1.2.3",
     },
     {
