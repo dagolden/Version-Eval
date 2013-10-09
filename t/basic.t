@@ -73,8 +73,13 @@ my @cases = (
     },
     # version.pm
     {
-        label  => "version.pm",
+        label  => "use version.pm",
         string => q[use version; our $VERSION = qv("1.2.3");],
+        expect => "v1.2.3",
+    },
+    {
+        label  => "require version.pm",
+        string => q[require version; our $VERSION = qv("1.2.3");],
         expect => "v1.2.3",
     },
     {
@@ -102,6 +107,11 @@ my @cases = (
     {
         label  => "die",
         string => q[$VERSION = 1.23; die;],
+        expect => undef,
+    },
+    {
+        label  => "require something not already loaded",
+        string => q[require Digest; $VERSION = 1.23;],
         expect => undef,
     },
     # malicious

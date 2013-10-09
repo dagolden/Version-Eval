@@ -21,9 +21,17 @@ sub eval_version {
     my ( $string, $timeout ) = @_;
     $timeout = $TIMEOUT unless defined $timeout;
 
+    # what $VERSION are we looking for?
+    my ( $sigil, $var ) = $string =~ /([\$*])(([\w\:\']*)\bVERSION)\b.*\=/;
+    return unless $sigil && $var;
+
+    # munge string: remove "use version" as we do that already and the "use"
+    # will get stopped by the Safe compartment
+    $string =~ s/(?:use|require)\s+version[^;]*/1/;
+
     # create test file
     my $temp = File::Temp->new;
-    print {$temp} _pl_template($string);
+    print {$temp} _pl_template( $string, $sigil, $var );
     close $temp;
 
     # run it with a timeout
@@ -60,13 +68,16 @@ sub eval_version {
 
     return if $rc || !defined $result; # error condition
 
+##  print STDERR "# C<< $string >> --> $result" if $result =~ /^ERROR/;
+    return if $result =~ /^ERROR/;
+
     chomp $result;
 
     return $result;
 }
 
 sub _pl_template {
-    my ($string) = @_;
+    my ( $string, $sigil, $var ) = @_;
     return <<"HERE"
 use 5.008001;
 use version;
@@ -81,13 +92,19 @@ my \$comp = Safe->new;
                             '*DynaLoader::']);
 \$comp->share_from('version', ['&qv']);
 
-my \$RESULT = version->parse(
+my \$code = <<'END';
+    local $sigil$var;
+    \$$var = undef;
     do {
         $string
-    }
-);
+    };
+    \$$var;
+END
 
-print version->parse(\$RESULT), "\\n";
+my \$result = \$comp->reval(\$code);
+print "ERROR: \$@\n" if \$@;
+exit unless defined \$result;
+print version->parse(\$result)->stringify, "\\n";
 
 HERE
 }
