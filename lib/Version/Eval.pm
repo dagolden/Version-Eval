@@ -1,4 +1,3 @@
-use v5.10;
 use strict;
 use warnings;
 
@@ -8,8 +7,8 @@ package Version::Eval;
 
 use File::Spec;
 use File::Temp 0.18;
-use IO::Pipe;
-use Proc::Fork;
+use IPC::Open3 qw(open3);
+use Symbol 'gensym';
 
 use parent 'Exporter';
 our @EXPORT_OK = qw/eval_version/;
@@ -46,37 +45,27 @@ sub eval_version {
     print {$temp} _pl_template( $string, $sigil, $var );
     close $temp;
 
-    # run it with a timeout
-    my $pipe = IO::Pipe->new;
     my $rc;
-    run_fork {
-        parent {
-            my $child = shift;
-            my $got   = eval {
-                local $SIG{ALRM} = sub { die "alarm\n" };
-                alarm $timeout;
-                my $c = waitpid $child, 0;
-                alarm 0;
-                ( $c != $child ) || $?;
-            };
-            if ( $@ eq "alarm\n" ) {
-                kill 'KILL', $child;
-                waitpid $child, 0;
-                $rc = $?;
-            }
-            else {
-                $rc = $got;
-            }
-        }
-        child {
-            open STDOUT, "<&" . fileno $pipe->writer;
-            open STDERR, File::Spec->devnull;
-            close STDIN;
-            exec $^X, $temp;
-        }
+    my $result;
+    my $err = gensym;
+    my $pid = open3(my $in, my $out, $err, $^X, $temp);
+    my $got = eval {
+        local $SIG{ALRM} = sub { die "alarm\n" };
+        alarm $timeout;
+        local $/;
+        $result = readline $out;
+        my $c = waitpid $pid, 0;
+        alarm 0;
+        ( $c != $pid ) || $?;
     };
-
-    my $result = readline $pipe->reader;
+    if ( $@ eq "alarm\n" ) {
+        kill 'KILL', $pid;
+        waitpid $pid, 0;
+        $rc = $?;
+    }
+    else {
+        $rc = $got;
+    }
 
     return if $rc || !defined $result; # error condition
 
@@ -94,6 +83,9 @@ sub _pl_template {
 use 5.008001;
 use version;
 use Safe;
+use File::Spec;
+open STDERR, '>', File::Spec->devnull;
+open STDIN, '<', File::Spec->devnull;
 
 my \$comp = Safe->new;
 \$comp->permit("entereval"); # for MBARBON/Module-Info-0.30.tar.gz
