@@ -83,7 +83,7 @@ sub eval_version {
 ##  print STDERR "# C<< $string >> --> $result" if $result =~ /^ERROR/;
     return if $result =~ /^ERROR/;
 
-    chomp $result;
+    $result =~ s/[\r\n]+\z//;
 
     return $result;
 }
@@ -116,7 +116,9 @@ END
 my \$result = \$comp->reval(\$code);
 print "ERROR: \$@\n" if \$@;
 exit unless defined \$result;
-print version->parse(\$result)->stringify, "\\n";
+
+eval { \$result = version->parse(\$result)->stringify };
+print \$result;
 
 HERE
 }
