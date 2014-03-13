@@ -49,6 +49,18 @@ sub eval_version {
     my $result;
     my $err = gensym;
     my $pid = open3(my $in, my $out, $err, $^X, $temp);
+    my $killer;
+    if ($^O eq 'MSWin32') {
+        $killer = fork;
+        if (!defined $killer) {
+            die "Can't fork: $!";
+        }
+        elsif ($killer == 0) {
+            sleep $timeout;
+            kill 'KILL', $pid;
+            exit 0;
+        }
+    }
     my $got = eval {
         local $SIG{ALRM} = sub { die "alarm\n" };
         alarm $timeout;
@@ -65,6 +77,10 @@ sub eval_version {
     }
     else {
         $rc = $got;
+    }
+    if ($killer) {
+        kill 'KILL', $killer;
+        waitpid $killer, 0;
     }
 
     return if $rc || !defined $result; # error condition
